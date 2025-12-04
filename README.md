@@ -482,19 +482,6 @@ quadrantChart
 - [ ] Bulk company import (CSV)
 - [ ] Team workspaces
 
-### Phase 3: Scale (Q2)
-- [ ] Real-time website visitor tracking
-- [ ] G2 intent data integration
-- [ ] LinkedIn activity monitoring
-- [ ] Automated sequences (Outreach/Salesloft)
-- [ ] Analytics dashboard
-
-### Phase 4: Enterprise (Q3)
-- [ ] Custom AI model fine-tuning
-- [ ] Multi-territory support
-- [ ] SOC2 compliance
-- [ ] API access
-- [ ] White-label options
 
 ---
 
