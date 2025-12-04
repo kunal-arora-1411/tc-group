@@ -1,0 +1,88 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Company {
+  id          String   @id @default(cuid())
+  name        String
+  domain      String
+  industry    String
+  size        String
+  description String
+  painPoints  String[]
+  opportunities String[]
+  techStack   String[]
+  employees   String?
+  location    String?
+  
+  // Relations
+  signals     IntentSignal[]
+  contacts    Contact[]
+  outreach    Outreach?
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model IntentSignal {
+  id          String   @id @default(cuid())
+  type        String
+  strength    String
+  description String
+  source      String
+  detectedAt  DateTime
+  
+  // Relations
+  companyId   String
+  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+}
+
+model Contact {
+  id          String   @id @default(cuid())
+  name        String
+  title       String
+  department  String
+  priority    String
+  linkedin    String?
+  email       String?
+  
+  // Relations
+  companyId   String
+  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+}
+
+model Outreach {
+  id          String   @id @default(cuid())
+  
+  // Email Content
+  emailSubject String
+  emailBody    String
+  
+  // LinkedIn Content
+  linkedinNote String
+  linkedinFollowUp String
+  
+  // Sequence Content
+  seqDay1Subject String
+  seqDay1Body    String
+  seqDay3Subject String
+  seqDay3Body    String
+  seqDay7Subject String
+  seqDay7Body    String
+  
+  personalizationPoints String[]
+  
+  // Relations
+  companyId   String   @unique
+  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  
+  createdAt   DateTime @default(now())
+}

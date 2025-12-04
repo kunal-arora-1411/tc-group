@@ -1,6 +1,7 @@
 // Core TypeScript interfaces for the AI-Powered Outreach Platform
 
 export interface Company {
+  id?: string; // Optional company ID from database
   name: string;
   domain: string;
   industry: string;

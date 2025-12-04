@@ -106,6 +106,7 @@ export async function runResearchAgent(
         // Build the research result with proper IDs
         const research: ResearchResult = {
             company: {
+                id: data.company?.id,
                 name: data.company?.name || companyName,
                 domain: data.company?.domain || `${companyName.toLowerCase().replace(/\s+/g, '')}.com`,
                 industry: data.company?.industry || 'Technology',
@@ -118,19 +119,21 @@ export async function runResearchAgent(
                 location: data.company?.location
             },
             signals: (data.signals || []).map((s: Partial<IntentSignal>) => ({
-                id: generateId(),
+                id: s.id || generateId(),
                 type: s.type || 'websiteVisit',
                 strength: s.strength || 'medium',
                 description: s.description || 'Signal detected',
                 source: s.source || 'AI Analysis',
-                detectedAt: new Date().toISOString()
+                detectedAt: s.detectedAt || new Date().toISOString()
             })),
             contacts: (data.contacts || []).map((c: Partial<Contact>) => ({
-                id: generateId(),
+                id: c.id || generateId(),
                 name: c.name || 'Decision Maker',
                 title: c.title || 'Executive',
                 department: c.department || 'executive',
-                priority: c.priority || 'primary'
+                priority: c.priority || 'primary',
+                email: c.email,
+                linkedin: c.linkedin
             })),
             summary: data.summary || `Research completed for ${companyName}.`,
             researchedAt: new Date().toISOString(),
@@ -290,7 +293,12 @@ export async function runOutreachAgent(
         const response = await fetch('/api/ai/outreach', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ research, score, targetContact })
+            body: JSON.stringify({
+                research,
+                score,
+                targetContact,
+                companyId: research.company.id // Pass companyId for database saving
+            })
         });
 
         onProgress?.({

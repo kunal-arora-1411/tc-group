@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
+import { prisma } from '@/lib/db';
 
 const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY,
@@ -7,7 +8,7 @@ const openai = new OpenAI({
 
 export async function POST(request: NextRequest) {
     try {
-        const { research, score, targetContact } = await request.json();
+        const { research, score, targetContact, companyId } = await request.json();
 
         if (!research || !targetContact) {
             return NextResponse.json({ error: 'Research and contact required' }, { status: 400 });
@@ -62,10 +63,60 @@ Return ONLY valid JSON (no markdown):
 
         try {
             const outreach = JSON.parse(cleanJson);
+
+            // Save outreach to database if companyId is provided
+            if (companyId) {
+                try {
+                    // Check if company exists in database
+                    const company = await prisma.company.findUnique({
+                        where: { id: companyId }
+                    });
+
+                    if (company) {
+                        // Save outreach to database
+                        await prisma.outreach.upsert({
+                            where: { companyId: companyId },
+                            update: {
+                                emailSubject: outreach.email?.subject || '',
+                                emailBody: outreach.email?.body || '',
+                                linkedinNote: outreach.linkedin?.connectionNote || '',
+                                linkedinFollowUp: outreach.linkedin?.followUpMessage || '',
+                                seqDay1Subject: outreach.sequence?.day1?.subject || '',
+                                seqDay1Body: outreach.sequence?.day1?.body || '',
+                                seqDay3Subject: outreach.sequence?.day3?.subject || '',
+                                seqDay3Body: outreach.sequence?.day3?.body || '',
+                                seqDay7Subject: outreach.sequence?.day7?.subject || '',
+                                seqDay7Body: outreach.sequence?.day7?.body || '',
+                                personalizationPoints: outreach.personalizationPoints || []
+                            },
+                            create: {
+                                companyId: companyId,
+                                emailSubject: outreach.email?.subject || '',
+                                emailBody: outreach.email?.body || '',
+                                linkedinNote: outreach.linkedin?.connectionNote || '',
+                                linkedinFollowUp: outreach.linkedin?.followUpMessage || '',
+                                seqDay1Subject: outreach.sequence?.day1?.subject || '',
+                                seqDay1Body: outreach.sequence?.day1?.body || '',
+                                seqDay3Subject: outreach.sequence?.day3?.subject || '',
+                                seqDay3Body: outreach.sequence?.day3?.body || '',
+                                seqDay7Subject: outreach.sequence?.day7?.subject || '',
+                                seqDay7Body: outreach.sequence?.day7?.body || '',
+                                personalizationPoints: outreach.personalizationPoints || []
+                            }
+                        });
+                        console.log(`Saved outreach for company ${companyId}`);
+                    }
+                } catch (dbError) {
+                    console.error('Database save error:', dbError);
+                    // Continue even if DB save fails
+                }
+            }
+
             return NextResponse.json(outreach);
-        } catch {
+        } catch (parseError) {
+            console.error('JSON parse error:', parseError);
             // Fallback outreach
-            return NextResponse.json({
+            const fallbackOutreach = {
                 email: {
                     subject: `Quick question for ${firstName}`,
                     body: `Hi ${firstName},\n\nI came across ${research.company.name} and noticed some interesting developments.\n\nWe help companies like yours with sales intelligence. Would a quick 15-minute call be worth it?\n\nBest,`
@@ -80,7 +131,47 @@ Return ONLY valid JSON (no markdown):
                     day7: { subject: 'Last note', body: `Hi ${firstName},\n\nFinal follow-up. Door's always open!\n\nCheers,` }
                 },
                 personalizationPoints: [research.company.name]
-            });
+            };
+
+            // Try to save fallback to database
+            if (companyId) {
+                try {
+                    await prisma.outreach.upsert({
+                        where: { companyId: companyId },
+                        update: {
+                            emailSubject: fallbackOutreach.email.subject,
+                            emailBody: fallbackOutreach.email.body,
+                            linkedinNote: fallbackOutreach.linkedin.connectionNote,
+                            linkedinFollowUp: fallbackOutreach.linkedin.followUpMessage,
+                            seqDay1Subject: fallbackOutreach.sequence.day1.subject,
+                            seqDay1Body: fallbackOutreach.sequence.day1.body,
+                            seqDay3Subject: fallbackOutreach.sequence.day3.subject,
+                            seqDay3Body: fallbackOutreach.sequence.day3.body,
+                            seqDay7Subject: fallbackOutreach.sequence.day7.subject,
+                            seqDay7Body: fallbackOutreach.sequence.day7.body,
+                            personalizationPoints: fallbackOutreach.personalizationPoints
+                        },
+                        create: {
+                            companyId: companyId,
+                            emailSubject: fallbackOutreach.email.subject,
+                            emailBody: fallbackOutreach.email.body,
+                            linkedinNote: fallbackOutreach.linkedin.connectionNote,
+                            linkedinFollowUp: fallbackOutreach.linkedin.followUpMessage,
+                            seqDay1Subject: fallbackOutreach.sequence.day1.subject,
+                            seqDay1Body: fallbackOutreach.sequence.day1.body,
+                            seqDay3Subject: fallbackOutreach.sequence.day3.subject,
+                            seqDay3Body: fallbackOutreach.sequence.day3.body,
+                            seqDay7Subject: fallbackOutreach.sequence.day7.subject,
+                            seqDay7Body: fallbackOutreach.sequence.day7.body,
+                            personalizationPoints: fallbackOutreach.personalizationPoints
+                        }
+                    });
+                } catch (dbError) {
+                    console.error('Fallback database save error:', dbError);
+                }
+            }
+
+            return NextResponse.json(fallbackOutreach);
         }
 
     } catch (error) {
